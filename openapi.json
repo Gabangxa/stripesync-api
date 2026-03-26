@@ -1,0 +1,295 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "StripeSync API",
+    "version": "1.0.0",
+    "description": "Developer-first Stripe to QuickBooks and Xero webhook bridge"
+  },
+  "servers": [
+    { "url": "/" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Workspace": {
+        "type": "object",
+        "properties": {
+          "workspace_id": { "type": "string", "example": "ws_a1b2c3d4e5f6" },
+          "webhook_url": { "type": "string", "format": "uri", "example": "https://your-app.replit.app/v1/stripe/events/ws_a1b2c3d4e5f6" },
+          "status": { "type": "string", "enum": ["active", "inactive"], "example": "active" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "event_id": { "type": "string", "example": "evt_001" },
+          "workspace_id": { "type": "string", "example": "ws_demo_alpha" },
+          "stripe_event_type": { "type": "string", "example": "payment_intent.succeeded" },
+          "stripe_event_id": { "type": "string", "example": "pi_3Oa1bcStripe001" },
+          "accounting_action": { "type": "string", "example": "create_invoice_and_payment" },
+          "accounting_platform": { "type": "string", "enum": ["quickbooks", "xero"] },
+          "status": { "type": "string", "enum": ["success", "failed", "pending"] },
+          "amount_cents": { "type": "integer", "example": 4900 },
+          "currency": { "type": "string", "example": "usd" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "processed_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  },
+  "security": [{ "BearerAuth": [] }],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "security": [],
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "version": { "type": "string", "example": "1.0.0" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "post": {
+        "summary": "Create a workspace",
+        "operationId": "createWorkspace",
+        "tags": ["Workspaces"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "stripe_webhook_secret", "accounting_platform", "accounting_token"],
+                "properties": {
+                  "name": { "type": "string", "example": "My SaaS" },
+                  "stripe_webhook_secret": { "type": "string", "example": "whsec_live_..." },
+                  "accounting_platform": { "type": "string", "enum": ["quickbooks", "xero"] },
+                  "accounting_token": { "type": "string", "example": "Bearer ya29.live..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Workspace created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Workspace" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/webhook-url": {
+      "get": {
+        "summary": "Get webhook URL for a workspace",
+        "operationId": "getWebhookUrl",
+        "tags": ["Workspaces"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workspace_id": { "type": "string" },
+                    "webhook_url": { "type": "string", "format": "uri" },
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stripe/events/{workspace_id}": {
+      "post": {
+        "summary": "Stripe webhook receiver",
+        "operationId": "receiveStripeEvent",
+        "description": "Called directly by Stripe. Do not call manually. No Authorization header required.",
+        "security": [],
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "type": { "type": "string" },
+                  "data": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event received and processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "received": { "type": "boolean" },
+                    "event_id": { "type": "string" },
+                    "accounting_action": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "summary": "List events",
+        "operationId": "listEvents",
+        "tags": ["Events"],
+        "parameters": [
+          { "name": "workspace_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["success", "failed", "pending"] } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated event list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Event" }
+                    },
+                    "total": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "offset": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{event_id}/retry": {
+      "post": {
+        "summary": "Retry a failed event",
+        "operationId": "retryEvent",
+        "tags": ["Events"],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event re-processed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Event" }
+              }
+            }
+          },
+          "404": {
+            "description": "Event not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Event is not in failed state",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
