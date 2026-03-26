@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StripeSync API — Stripe → QuickBooks & Xero, Developer-First</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --green: #22c55e;
+      --green-dim: #15803d;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --code-bg: #0a0f1e;
+      --radius: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 40px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+    .nav-logo { font-size: 18px; font-weight: 700; color: var(--green); letter-spacing: -0.5px; }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--muted); font-size: 14px; }
+    .nav-links a:hover { color: var(--text); }
+
+    /* LAYOUT */
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: #052e16;
+      color: var(--green);
+      border: 1px solid var(--green-dim);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #f1f5f9 0%, var(--green) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-tagline {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 32px;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--green); color: #052e16; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+
+    /* PROBLEM STATEMENT */
+    .problem-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin: 0 0 56px;
+    }
+    .problem-section p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .problem-section strong { color: var(--text); }
+
+    /* SECTION HEADERS */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .section-sub {
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    /* PRICING */
+    .pricing-section { margin-bottom: 72px; }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .plan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .plan-card.featured { border-color: var(--green); }
+    .plan-name { font-weight: 700; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .plan-price { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+    .plan-price span { font-size: 14px; font-weight: 400; color: var(--muted); }
+    .plan-desc { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .plan-features { list-style: none; font-size: 13px; }
+    .plan-features li { padding: 4px 0; color: var(--muted); }
+    .plan-features li::before { content: '✓ '; color: var(--green); font-weight: 700; }
+
+    /* PLAYGROUND */
+    .playground-section { margin-bottom: 72px; }
+    .playground-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 680px) { .playground-grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      background: #162032;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    .panel-body { padding: 20px; }
+
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; margin-top: 12px; font-weight: 600; }
+    label:first-child { margin-top: 0; }
+    input[type="text"], select, textarea {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+    }
+    input:focus, select:focus { outline: 1px solid var(--green); border-color: var(--green); }
+    select option { background: var(--surface); }
+
+    .submit-btn {
+      margin-top: 16px;
+      width: 100%;
+      background: var(--green);
+      color: #052e16;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .submit-btn:hover { opacity: 0.85; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Response / code blocks */
+    .response-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #a8d8a8;
+      white-space: pre;
+      overflow-x: auto;
+      min-height: 60px;
+      margin-top: 12px;
+    }
+    .response-box.error { color: #f87171; }
+
+    .curl-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #93c5fd;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* QUICKSTART */
+    .quickstart-section { margin-bottom: 72px; }
+    .steps { display: flex; flex-direction: column; gap: 16px; }
+    .step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--green-dim);
+      color: var(--green);
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-content { flex: 1; }
+    .step-title { font-weight: 600; margin-bottom: 8px; }
+    pre.code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #93c5fd;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* EVENTS TABLE */
+    .events-section { margin-bottom: 72px; }
+    .events-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .events-controls select { width: auto; }
+    .events-controls .btn { padding: 8px 16px; font-size: 13px; }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    thead th {
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:hover { background: #1a2840; }
+    td { padding: 10px 12px; color: var(--text); vertical-align: middle; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-success { background: #052e16; color: var(--green); }
+    .badge-failed { background: #450a0a; color: #f87171; }
+    .badge-pending { background: #422006; color: #fb923c; }
+
+    .retry-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .retry-btn:hover { border-color: var(--green); color: var(--green); }
+    .no-events { text-align: center; color: var(--muted); padding: 32px; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">⚡ StripeSync API</div>
+  <div class="nav-links">
+    <a href="/docs">Docs</a>
+    <a href="/health">Health</a>
+    <a href="https://github.com/Gabangxa/stripesync-api" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">Beta — Now Available</div>
+  <h1>StripeSync API</h1>
+  <p class="hero-tagline">The developer-first Stripe → QuickBooks &amp; Xero bridge. Configure via API, not UI. One webhook URL, zero spreadsheets.</p>
+  <div class="hero-cta">
+    <a href="#playground" class="btn btn-primary">Try It Live</a>
+    <a href="/docs" class="btn btn-outline">View Docs</a>
+  </div>
+</section>
+
+<div class="container">
+
+  <!-- PROBLEM STATEMENT -->
+  <div class="problem-section">
+    <p>
+      <strong>Synder charges $65/mo.</strong> Zapier breaks on edge cases. Neither gives you an API to control the sync, audit individual events, or retry failures programmatically. <strong>StripeSync does.</strong> POST your Stripe webhook secret and accounting OAuth token once — get a webhook URL back. Every <code>payment_intent.succeeded</code>, <code>charge.refunded</code>, and subscription event auto-creates the corresponding invoice or credit note in QuickBooks or Xero.
+    </p>
+  </div>
+
+  <!-- PRICING -->
+  <section class="pricing-section">
+    <div class="section-label">Pricing</div>
+    <div class="section-title">Simple, usage-based pricing</div>
+    <p class="section-sub">No per-seat nonsense. Pay for what you sync.</p>
+    <div class="pricing-grid">
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">$0 <span>/mo</span></div>
+        <div class="plan-desc">Prototype &amp; test</div>
+        <ul class="plan-features">
+          <li>1 workspace</li>
+          <li>100 events/mo</li>
+          <li>QuickBooks only</li>
+          <li>7-day event history</li>
+        </ul>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-name">Developer</div>
+        <div class="plan-price">$9 <span>/mo</span></div>
+        <div class="plan-desc">Indie SaaS founders</div>
+        <ul class="plan-features">
+          <li>3 workspaces</li>
+          <li>2,000 events/mo</li>
+          <li>QuickBooks + Xero</li>
+          <li>30-day event history</li>
+        </ul>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Startup</div>
+        <div class="plan-price">$29 <span>/mo</span></div>
+        <div class="plan-desc">Growing teams</div>
+        <ul class="plan-features">
+          <li>10 workspaces</li>
+          <li>10,000 events/mo</li>
+          <li>QuickBooks + Xero</li>
+          <li>90-day event history</li>
+        </ul>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Scale</div>
+        <div class="plan-price">$79 <span>/mo</span></div>
+        <div class="plan-desc">High-volume production</div>
+        <ul class="plan-features">
+          <li>Unlimited workspaces</li>
+          <li>100,000 events/mo</li>
+          <li>QuickBooks + Xero</li>
+          <li>1-year event history</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAYGROUND -->
+  <section class="playground-section" id="playground">
+    <div class="section-label">API Playground</div>
+    <div class="section-title">Create a workspace in seconds</div>
+    <p class="section-sub">Submit the form below to call <code>POST /v1/workspaces</code> live against this server.</p>
+
+    <div class="playground-grid">
+      <!-- FORM -->
+      <div class="panel">
+        <div class="panel-header"><div class="dot"></div> POST /v1/workspaces</div>
+        <div class="panel-body">
+          <form id="createWorkspaceForm">
+            <label for="ws_name">Workspace Name</label>
+            <input type="text" id="ws_name" value="My SaaS" required />
+
+            <label for="ws_platform">Accounting Platform</label>
+            <select id="ws_platform">
+              <option value="quickbooks">QuickBooks Online</option>
+              <option value="xero">Xero</option>
+            </select>
+
+            <label for="ws_secret">Stripe Webhook Secret</label>
+            <input type="text" id="ws_secret" value="whsec_test_example" required />
+
+            <label for="ws_token">Accounting OAuth Token</label>
+            <input type="text" id="ws_token" value="Bearer test_token_example" required />
+
+            <button type="submit" class="submit-btn" id="createBtn">Create Workspace</button>
+          </form>
+
+          <div id="wsResponse" class="response-box" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- CURL EQUIVALENT -->
+      <div class="panel">
+        <div class="panel-header"><div class="dot"></div> curl equivalent</div>
+        <div class="panel-body">
+          <div class="curl-block" id="curlBlock">curl -X POST \
+  https://your-app.replit.app/v1/workspaces \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+  "name": "My SaaS",
+  "accounting_platform": "quickbooks",
+  "stripe_webhook_secret": "whsec_test_example",
+  "accounting_token": "Bearer test_token_example"
+}'</div>
+          <div style="margin-top: 16px;">
+            <div class="section-label" style="margin-bottom: 8px;">Response</div>
+            <div class="curl-block" style="color: #a8d8a8;">{
+  "workspace_id": "ws_abc123...",
+  "webhook_url": "https://your-app.replit.app/v1/stripe/events/ws_abc123...",
+  "status": "active",
+  "created_at": "2026-03-26T10:42:00Z"
+}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICK START -->
+  <section class="quickstart-section">
+    <div class="section-label">Quick Start</div>
+    <div class="section-title">Up and running in 3 steps</div>
+    <p class="section-sub">No SDK required. Just curl.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Create a workspace — get your webhook URL</div>
+          <pre class="code">curl -X POST https://your-app.replit.app/v1/workspaces \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My SaaS",
+    "accounting_platform": "quickbooks",
+    "stripe_webhook_secret": "whsec_live_...",
+    "accounting_token": "Bearer ya29.live..."
+  }'</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Paste the webhook URL into Stripe Dashboard</div>
+          <pre class="code"># Stripe Dashboard → Developers → Webhooks → Add endpoint
+# URL: https://your-app.replit.app/v1/stripe/events/ws_abc123
+# Events: payment_intent.succeeded, charge.refunded, customer.subscription.*</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Monitor your event log</div>
+          <pre class="code">curl https://your-app.replit.app/v1/events?workspace_id=ws_abc123&limit=10</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EVENT LOG -->
+  <section class="events-section">
+    <div class="section-label">Event Log</div>
+    <div class="section-title">Recent sync events</div>
+    <p class="section-sub">Live view of the in-memory event store. Click Refresh to reload.</p>
+
+    <div class="events-controls">
+      <select id="filterStatus">
+        <option value="">All statuses</option>
+        <option value="success">Success</option>
+        <option value="failed">Failed</option>
+        <option value="pending">Pending</option>
+      </select>
+      <button class="btn btn-outline" onclick="loadEvents()">↻ Refresh Events</button>
+    </div>
+
+    <div class="panel">
+      <div class="table-wrap">
+        <table id="eventsTable">
+          <thead>
+            <tr>
+              <th>Event ID</th>
+              <th>Workspace</th>
+              <th>Stripe Event</th>
+              <th>Action</th>
+              <th>Platform</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Processed At</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="eventsBody">
+            <tr><td colspan="9" class="no-events">Loading events...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>StripeSync API &mdash; <a href="https://github.com/Gabangxa/stripesync-api" target="_blank">GitHub</a> &mdash; <a href="/docs">Docs</a> &mdash; <a href="/health">Health</a></p>
+  <p style="margin-top: 8px;">Not affiliated with Stripe, Intuit, or Xero. This is a developer mockup.</p>
+</footer>
+
+<script>
+  // ── Create Workspace Form ────────────────────────────────────────────────────
+  document.getElementById('createWorkspaceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('createBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    const body = {
+      name: document.getElementById('ws_name').value,
+      accounting_platform: document.getElementById('ws_platform').value,
+      stripe_webhook_secret: document.getElementById('ws_secret').value,
+      accounting_token: document.getElementById('ws_token').value,
+    };
+
+    // Update curl block dynamically
+    document.getElementById('curlBlock').textContent =
+      `curl -X POST \\\n  ${location.origin}/v1/workspaces \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer your_api_key" \\\n  -d '${JSON.stringify(body, null, 2)}'`;
+
+    const box = document.getElementById('wsResponse');
+    box.style.display = 'block';
+    box.classList.remove('error');
+    box.textContent = 'Sending request...';
+
+    try {
+      const res = await fetch('/v1/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        box.classList.add('error');
+        box.textContent = JSON.stringify(data, null, 2);
+      } else {
+        box.textContent = JSON.stringify(data, null, 2);
+        loadEvents();
+      }
+    } catch (err) {
+      box.classList.add('error');
+      box.textContent = 'Network error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Workspace';
+    }
+  });
+
+  // ── Event Log ────────────────────────────────────────────────────────────────
+  async function loadEvents() {
+    const status = document.getElementById('filterStatus').value;
+    const params = new URLSearchParams({ limit: 20 });
+    if (status) params.set('status', status);
+
+    try {
+      const res = await fetch('/v1/events?' + params.toString());
+      const data = await res.json();
+      renderEvents(data.events, data.total);
+    } catch (err) {
+      document.getElementById('eventsBody').innerHTML =
+        `<tr><td colspan="9" class="no-events" style="color:#f87171">Failed to load events: ${err.message}</td></tr>`;
+    }
+  }
+
+  function renderEvents(events, total) {
+    const tbody = document.getElementById('eventsBody');
+    if (!events || events.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="no-events">No events found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = events.map(e => {
+      const badgeClass = e.status === 'success' ? 'badge-success' : e.status === 'failed' ? 'badge-failed' : 'badge-pending';
+      const amount = e.amount_cents ? `$${(e.amount_cents / 100).toFixed(2)} ${e.currency.toUpperCase()}` : '—';
+      const ts = e.processed_at ? new Date(e.processed_at).toLocaleString() : '—';
+      const retryBtn = e.status === 'failed'
+        ? `<button class="retry-btn" onclick="retryEvent('${e.event_id}')">↺ Retry</button>`
+        : '';
+
+      return `<tr>
+        <td style="font-family: monospace; font-size: 11px; color: var(--muted);">${e.event_id}</td>
+        <td style="font-family: monospace; font-size: 11px;">${e.workspace_id}</td>
+        <td style="font-size: 11px; color: var(--muted);">${e.stripe_event_type}</td>
+        <td style="font-size: 11px;">${e.accounting_action}</td>
+        <td><span style="text-transform: capitalize;">${e.accounting_platform}</span></td>
+        <td>${amount}</td>
+        <td><span class="badge ${badgeClass}">${e.status}</span></td>
+        <td style="font-size: 11px; color: var(--muted);">${ts}</td>
+        <td>${retryBtn}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function retryEvent(eventId) {
+    try {
+      const res = await fetch(`/v1/events/${eventId}/retry`, { method: 'POST' });
+      if (res.ok) loadEvents();
+    } catch (err) {
+      alert('Retry failed: ' + err.message);
+    }
+  }
+
+  // Auto-load on page load
+  loadEvents();
+</script>
+</body>
+</html>
