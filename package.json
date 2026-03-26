@@ -1,0 +1,17 @@
+{
+  "name": "stripesync-api",
+  "version": "1.0.0",
+  "description": "Developer-first Stripe to QuickBooks and Xero webhook bridge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "stripe": "^14.0.0",
+    "uuid": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
